@@ -1,10 +1,14 @@
 import os
 
+from faker import Faker
 from neocore.UInt160 import UInt160
 
 from neo.Implementations.Wallets.peewee.UserWallet import UserWallet
+from neo.Settings import settings
 from neo.Utils.WalletFixtureTestCase import WalletFixtureTestCase
 from neo.Wallets.utils import to_aes_key
+
+settings.USE_DEBUG_STORAGE = False
 
 
 class BoaFixtureTest(WalletFixtureTestCase):
@@ -56,3 +60,7 @@ class BoaFixtureTest(WalletFixtureTestCase):
                                            to_aes_key(
                                                BoaFixtureTest.wallet_2_pass()))
         return cls._wallet2
+
+    @property
+    def faker(self):
+        return Faker()

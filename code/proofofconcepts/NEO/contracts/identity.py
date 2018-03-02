@@ -18,21 +18,22 @@ def create(data):
     identity[2] = data[2]
 
     data_serialized = serialize_array(identity)
-    Put(ctx, OWNER, data_serialized)
+    Put(ctx, data[0], data_serialized)
 
     return True
 
 
-def retrieve():
-    return Get(ctx, OWNER)
+def retrieve(data):
+    saved = Get(ctx, data[0])
+    return deserialize_bytearray(saved)
 
 
 def update(data):
     return create(data)
 
 
-def delete():
-    Delete(ctx, OWNER)
+def delete(data):
+    Delete(ctx, data[0])
 
     return True
 
@@ -77,12 +78,12 @@ def Main(operation, data):
         return create(data)
 
     if operation == "Retrieve":
-        return retrieve()
+        return retrieve(data)
 
     if operation == "Update":
         return update(data)
 
     if operation == "Delete":
-        return delete()
+        return delete(data)
 
     return False
