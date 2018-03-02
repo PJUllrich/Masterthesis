@@ -1,7 +1,7 @@
 import os
-import random
 import shutil
 
+import binascii
 from boa.compiler import Compiler
 
 from neo.Prompt.Commands.BuildNRun import TestBuild
@@ -11,6 +11,9 @@ from tests.test_base import BoaFixtureTest
 settings.USE_DEBUG_STORAGE = True
 settings.DEBUG_STORAGE_PATH = './fixtures/debugstorage'
 
+LENGTH_ADDRESS = 16
+LENGTH_HASH = 32
+
 
 class TestContract(BoaFixtureTest):
     contract = None
@@ -18,30 +21,26 @@ class TestContract(BoaFixtureTest):
 
     class ContractData:
         operation = None
-        owner = None
-        name = None
-        age = None
+        student_address = None
+        document_hash = None
 
-        def __init__(self, owner, name, age):
-            self.owner = owner
-            self.name = name
-            self.age = age
+        def __init__(self, student_address, document_hash):
+            self.student_address = student_address
+            self.document_hash = document_hash
 
         def to_array(self):
-            return [self.operation, [self.owner, self.name, str(self.age)]]
-
-        def equal_to_bytearray(self, data_to_check):
-            return (data_to_check[0].GetString() == self.owner
-                    and data_to_check[1].GetString() == self.name
-                    and data_to_check[2].GetBigInteger() == self.age)
+            return [self.operation, [self.student_address, self.document_hash]]
 
     def setUp(self):
         self.dropDebugStorage()
 
-        contract_schema = Compiler.instance().load('%s/NEO/contracts/identity.py' % TestContract.dirname).default
+        contract_schema = Compiler.instance().load('%s/NEO/contracts/document.py' % TestContract.dirname).default
         self.contract = contract_schema.write()
 
-        self.data = self.ContractData(self.faker.name(), self.faker.name(), random.randint(1, 100))
+        random_address = bytearray(os.urandom(LENGTH_ADDRESS))
+        random_hash = bytearray(os.urandom(LENGTH_ADDRESS))
+
+        self.data = self.ContractData(random_address, random_hash)
 
     @classmethod
     def tearDownClass(cls):
@@ -57,28 +56,75 @@ class TestContract(BoaFixtureTest):
         except Exception as e:
             print("couldn't remove debug storage %s " % e)
 
-    def test_create(self):
+    def test_when_create_new_should_return_true(self):
         self.data.operation = 'Create'
         tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].GetByteArray(), b'\x01')  # Asserts to True in Bytes
+        self.assertEqual(1, len(results))
+        self.assertEqual(b'\x01', results[0].GetByteArray())  # Asserts to True in Bytes
 
-    def test_retrieve(self):
-        self.test_create()
+    def test_when_create_existing_should_return_false(self):
+        self.data.operation = 'Create'
 
+        tx, results1, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
+        tx, results2, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
+
+        self.assertEqual(1, len(results2))
+        self.assertEqual(b'', results2[0].GetByteArray())
+
+    def test_when_retrieve_should_return_created_contract_data(self):
+        # First, make sure that something was stored in Storage
+        self.create_entry()
+
+        # Perform Retrieve operation
         self.data.operation = 'Retrieve'
         tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(len(results[0].GetArray()), len(self.data.to_array()[1]))
-        self.assertTrue(self.data.equal_to_bytearray(results[0].GetArray()))
+        # Check that the retrieved data is equal to the initially saved data
+        self.assert_result_equal_to_data(results)
 
-    def test_update(self):
-        pass
+    def test_when_update_should_return_true(self):
+        self.create_entry()
 
-    def test_delete(self):
-        pass
+        self.data.operation = 'Update'
+
+        # Change the age field to a random new number
+        original_value = self.data.document_hash
+        while self.data.document_hash == original_value:
+            self.data.document_hash = bytearray(os.urandom(LENGTH_HASH))
+
+        # Perform the update and check that the Contract returns True
+        tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
+        self.assertEqual(1, len(results))
+        self.assertEqual(True, results[0].GetBigInteger())
+
+    def test_when_delete_existing_should_return_true(self):
+        self.create_entry()
+
+        self.data.operation = 'Delete'
+        tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
+
+        self.assertEqual(1, len(results))
+        self.assertEqual(True, results[0].GetBigInteger())
+
+    def test_when_delete_non_existing_should_return_false(self):
+        self.data.operation = 'Delete'
+        tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
+
+        self.assertEqual(1, len(results))
+        self.assertEqual(False, results[0].GetBigInteger())
 
     def test_verify(self):
         pass
+
+    def assert_result_equal_to_data(self, results):
+        self.assertEqual(1, len(results))
+        self.assertEqual(len(self.data.to_array()[1]), len(results[0].GetArray()))
+
+        data_to_check = results[0].GetArray()
+        self.assertEqual(self.data.student_address, data_to_check[0].GetByteArray())
+        self.assertEqual(self.data.document_hash, data_to_check[1].GetByteArray())
+
+    def create_entry(self):
+        self.data.operation = 'Create'
+        tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
