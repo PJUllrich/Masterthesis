@@ -1,12 +1,14 @@
-﻿from boa.blockchain.vm.Neo.Runtime import CheckWitness
-from boa.blockchain.vm.Neo.Storage import Delete, Get, GetContext, Put
-from boa.code.builtins import sha256
+﻿from boa.builtins import list, sha256
+from boa.interop.Neo.Runtime import CheckWitness
+from boa.interop.Neo.Storage import Delete, Get, GetContext, Put
 
-from proofofconcepts.NEO.util.serialize import *
+from contracts.util.serialize import *
 
 OWNER = 'OWNER'
 NAME = 'NAME'
 AGE = 'AGE'
+
+ctx = GetContext()
 
 
 def create(data):
@@ -16,17 +18,13 @@ def create(data):
     identity[2] = data[2]
 
     data_serialized = serialize_array(identity)
-    ctx = GetContext()
     Put(ctx, OWNER, data_serialized)
 
     return True
 
 
 def retrieve():
-    ctx = GetContext()
-    contract = Get(ctx, OWNER)
-
-    return contract
+    return Get(ctx, OWNER)
 
 
 def update(data):
@@ -34,15 +32,18 @@ def update(data):
 
 
 def delete():
-    ctx = GetContext()
     Delete(ctx, OWNER)
 
     return True
 
 
 def verify(data):
-    ctx = GetContext()
     saved_bytes = Get(ctx, OWNER)
+
+    if saved_bytes is None:
+        print('Identity is not created yet.')
+        return False
+
     saved = deserialize_bytearray(saved_bytes)
 
     input = sha256(data)
@@ -52,7 +53,6 @@ def verify(data):
 
 
 def is_owner():
-    ctx = GetContext()
     contract = Get(ctx, OWNER)
 
     # Identity is not created yet.
@@ -61,8 +61,7 @@ def is_owner():
         return True
 
     owner = contract[0]
-    is_owner = CheckWitness(owner)
-    return is_owner
+    return CheckWitness(owner)
 
 
 def Main(operation, data):
