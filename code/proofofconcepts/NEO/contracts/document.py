@@ -1,5 +1,4 @@
-﻿from boa.builtins import sha256, list
-from boa.interop.Neo.Runtime import CheckWitness
+﻿from boa.interop.Neo.Runtime import CheckWitness
 from boa.interop.Neo.Storage import Delete, Get, GetContext, Put
 
 from contracts.util.serialize import *
@@ -8,6 +7,8 @@ IDX_KEY = 0
 
 IDX_ADDRESS = 0
 IDX_HASH = 1
+
+OWNER = b'S\xefB\xc8\xdf!^\xbeZ|z\xe8\x01\xcb\xc3\xac/\xacI)'
 
 ctx = GetContext()
 
@@ -68,30 +69,13 @@ def delete(data):
 
 
 def verify(data):
-    saved_bytes = Get(ctx, data[IDX_KEY])
+    saved_serialized = Get(ctx, data[IDX_KEY])
+    saved_deserialized = deserialize_bytearray(saved_serialized)
 
-    if saved_bytes is None:
-        print('Error: Entry is not created yet.')
-        return False
+    saved = saved_deserialized[IDX_HASH]
+    check = data[IDX_HASH]
 
-    saved = deserialize_bytearray(saved_bytes)
-
-    input = sha256(data)
-    check = sha256(saved)
-
-    return input == check
-
-
-def is_owner(key):
-    contract = Get(ctx, key)
-
-    # Entry is not created yet.
-    if contract is None:
-        print('Info: Entry not created yet. Allowing creation for now.')
-        return True
-
-    owner = contract[IDX_KEY]
-    return CheckWitness(owner)
+    return saved == check
 
 
 def Main(operation, data):
@@ -118,9 +102,9 @@ def Main(operation, data):
         return verify(data)
 
     # Only the Owner can execute methods hereafter
-    # if not is_owner(data[0]):
-    #     print('You are not the owner of this Identity!')
-    #     return False
+    if not CheckWitness(OWNER):
+        print('You are not the owner of this Contract!')
+        return False
 
     if operation == "Create":
         return create(data)
@@ -134,4 +118,5 @@ def Main(operation, data):
     if operation == "Delete":
         return delete(data)
 
+    print('Operation does not exist')
     return False

@@ -1,7 +1,6 @@
 import os
 import shutil
 
-import binascii
 from boa.compiler import Compiler
 
 from neo.Prompt.Commands.BuildNRun import TestBuild
@@ -55,6 +54,20 @@ class TestContract(BoaFixtureTest):
                 shutil.rmtree(settings.DEBUG_STORAGE_PATH)
         except Exception as e:
             print("couldn't remove debug storage %s " % e)
+
+    def test_when_caller_is_not_owner_should_return_false(self):
+        self.data.operation = 'Test'
+        tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet2(), '0710', '05')
+
+        self.assertEqual(1, len(results))
+        self.assertEqual(b'', results[0].GetByteArray())  # Asserts to False in Bytes
+
+    def test_when_operation_not_implemented_should_return_false(self):
+        self.data.operation = 'OperationDoesNotExist'
+        tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
+
+        self.assertEqual(1, len(results))
+        self.assertEqual(b'', results[0].GetByteArray())  # Asserts to False in Bytes
 
     def test_when_create_new_should_return_true(self):
         self.data.operation = 'Create'
@@ -114,8 +127,24 @@ class TestContract(BoaFixtureTest):
         self.assertEqual(1, len(results))
         self.assertEqual(False, results[0].GetBigInteger())
 
-    def test_verify(self):
-        pass
+    def test_when_verify_with_equal_hash_should_return_true(self):
+        self.create_entry()
+
+        self.data.operation = 'Verify'
+        tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
+
+        self.assertEqual(1, len(results))
+        self.assertEqual(True, results[0].GetBigInteger())
+
+    def test_when_verify_with_different_hash_should_return_false(self):
+        self.create_entry()
+
+        self.data.operation = 'Verify'
+        self.data.document_hash = bytearray(os.urandom(LENGTH_HASH))
+        tx, results, total_ops, engine = TestBuild(self.contract, self.data.to_array(), self.GetWallet1(), '0710', '05')
+
+        self.assertEqual(1, len(results))
+        self.assertEqual(False, results[0].GetBigInteger())
 
     def assert_result_equal_to_data(self, results):
         self.assertEqual(1, len(results))
