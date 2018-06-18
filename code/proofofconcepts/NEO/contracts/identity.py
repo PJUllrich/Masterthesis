@@ -14,11 +14,11 @@ ctx = GetContext()
 
 
 def serialize_data(data):
-    document = list(length=2)
-    document[IDX_ADDRESS] = data[IDX_ADDRESS]
-    document[IDX_HASH] = data[IDX_HASH]
+    identity = list(length=2)
+    identity[IDX_ADDRESS] = data[IDX_ADDRESS]
+    identity[IDX_HASH] = data[IDX_HASH]
 
-    return serialize_array(document)
+    return serialize_array(identity)
 
 
 def create(data):
@@ -87,8 +87,8 @@ def Main(operation, data):
         The operation to execute with the contract call
     data : boa.builtins.list
         A list containing an address and a hash.
-        Address: Of the student to whom the document belongs
-        Hash: The hash of the document belonging the the student
+        Address: Of the student to whom the identity belongs
+        Hash: The hash of the identity belonging the the student
 
     Returns
     -------
@@ -101,13 +101,13 @@ def Main(operation, data):
     if operation == "Verify":
         return verify(data)
 
+    if operation == "Create":
+        return create(data)
+
     # Only the Owner can execute methods hereafter
     if not CheckWitness(OWNER):
         print('You are not the owner of this Contract!')
         return False
-
-    if operation == "Create":
-        return create(data)
 
     if operation == "Retrieve":
         return retrieve(data)

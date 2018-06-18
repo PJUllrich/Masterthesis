@@ -7,14 +7,14 @@ import (
 	peer "github.com/hyperledger/fabric/protos/peer"
 )
 
-type Document struct {
+type Identity struct {
 }
 
 // Init is called during chaincode instantiation to initialize any
 // data. Note that chaincode upgrade also calls this function to reset
 // or to migrate data, so be careful to avoid a scenario where you
 // inadvertently clobber your ledger's data!
-func (t *Document) Init(stub shim.ChaincodeStubInterface) peer.Response {
+func (t *Identity) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	// Get the args from the transaction proposal
 	args := stub.GetStringArgs()
 	if len(args) != 2 {
@@ -34,7 +34,7 @@ func (t *Document) Init(stub shim.ChaincodeStubInterface) peer.Response {
 // Invoke is called per transaction on the chaincode. Each transaction is
 // either a 'get' or a 'set' on the asset created by Init function. The 'set'
 // method may create a new asset by specifying a new key-value pair.
-func (t *Document) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
+func (t *Identity) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 	fn, args := stub.GetFunctionAndParameters()
 
 	var result string
@@ -58,7 +58,7 @@ func (t *Document) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 	return shim.Success([]byte(result))
 }
 
-func (t *Document) verify(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+func (t *Identity) verify(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	if len(args) != 2 {
 		return "", fmt.Errorf("incorrect arguments. expected 2. received %d", len(args))
 	}
@@ -78,7 +78,7 @@ func (t *Document) verify(stub shim.ChaincodeStubInterface, args []string) (stri
 	return res, nil
 }
 
-func (t *Document) create(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+func (t *Identity) create(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	if len(args) != 2 {
 		return "", fmt.Errorf("incorrect arguments. expected 2. received %d", len(args))
 	}
@@ -99,7 +99,7 @@ func (t *Document) create(stub shim.ChaincodeStubInterface, args []string) (stri
 	return args[1], nil
 }
 
-func (t *Document) retrieve(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+func (t *Identity) retrieve(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("incorrect arguments. expected 1. received %d", len(args))
 	}
@@ -115,7 +115,7 @@ func (t *Document) retrieve(stub shim.ChaincodeStubInterface, args []string) (st
 	return string(val), nil
 }
 
-func (t *Document) update(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+func (t *Identity) update(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	if len(args) != 2 {
 		return "", fmt.Errorf("incorrect arguments. expected 2. received %d", len(args))
 	}
@@ -136,7 +136,7 @@ func (t *Document) update(stub shim.ChaincodeStubInterface, args []string) (stri
 	return args[1], nil
 }
 
-func (t *Document) delete(stub shim.ChaincodeStubInterface, args []string) (string, error) {
+func (t *Identity) delete(stub shim.ChaincodeStubInterface, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("incorrect arguments. expected 1. received %d", len(args))
 	}
